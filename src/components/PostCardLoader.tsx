@@ -1,7 +1,7 @@
 const PostCardLoader = () => {
   return (
     <div className="grid-col-1 mx-auto my-10 grid gap-10 lg:grid-cols-2">
-      {Array.from(Array(4).keys()).map((_, index) => (
+      {Array.from(Array(2).keys()).map((_, index) => (
         <Loader key={index} />
       ))}
     </div>
