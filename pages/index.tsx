@@ -1,37 +1,48 @@
-import type { GetServerSideProps, NextPage } from 'next'
 import { useEffect } from 'react'
-import { dehydrate, QueryClient, useInfiniteQuery } from 'react-query'
+import { useInfiniteQuery } from 'react-query'
 import { useInView } from 'react-intersection-observer'
 
 import PostCardLoader from '../src/components/PostCardLoader'
 import PostCard from '../src/components/PostCard'
+import prisma from '../src/lib/prisma'
 
+import type { GetStaticProps } from 'next'
 import type { Post } from '@prisma/client'
 
 const getPosts = async ({
   pageParam = '',
 }: {
-  pageParam?: string
+  pageParam: string
 }): Promise<{ posts: Post[]; nextId: string }> => {
   await new Promise((resolve) => setTimeout(resolve, 2000))
 
-  const res = await fetch(`http://localhost:3000/api/posts?cursor=${pageParam}`)
+  const res = await fetch(`/api/posts?cursor=${pageParam}`)
   const data = await res.json()
 
   return data
 }
 
-const Home: NextPage = () => {
+const Home = ({
+  initialData,
+  nextId,
+}: {
+  initialData: Post[]
+  nextId: string
+}) => {
   const {
     data: posts,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useInfiniteQuery(['posts'], getPosts, {
-    getNextPageParam: (lastPage) => lastPage.nextId ?? false,
-  })
+  } = useInfiniteQuery(
+    ['posts'],
+    ({ pageParam = nextId }) => getPosts({ pageParam }),
+    {
+      getNextPageParam: (lastPage) => lastPage.nextId ?? false,
+    }
+  )
 
-  const { inView, ref } = useInView({ rootMargin: '200px' })
+  const { inView, ref } = useInView({ threshold: 1, rootMargin: '0px' })
   useEffect(() => {
     if (inView && hasNextPage) {
       fetchNextPage()
@@ -40,6 +51,12 @@ const Home: NextPage = () => {
 
   return (
     <div className="mx-auto max-w-4xl bg-gray-50">
+      <div className="m-6 mx-auto grid grid-cols-2 gap-6">
+        {initialData.map((post) => (
+          <PostCard key={post.id} {...post} />
+        ))}
+      </div>
+
       {posts &&
         posts.pages?.flatMap((page, i) => {
           return (
@@ -62,13 +79,16 @@ const Home: NextPage = () => {
 
 export default Home
 
-export const getServerSideProps: GetServerSideProps = async () => {
-  const queryClient = new QueryClient()
-
-  await queryClient.prefetchQuery(['posts'], getPosts)
+export const getServerSideProps: GetStaticProps = async () => {
+  const posts = await prisma.post.findMany({
+    take: 4,
+    select: { content: true, title: true, imageUrl: true, id: true },
+  })
+  const nextId = posts[3].id
   return {
     props: {
-      dehydratedState: dehydrate(queryClient),
+      initialData: posts,
+      nextId,
     },
   }
 }
