@@ -6,7 +6,7 @@ import PostCardLoader from '../src/components/PostCardLoader'
 import PostCard from '../src/components/PostCard'
 import prisma from '../src/lib/prisma'
 
-import type { GetStaticProps } from 'next'
+import type { GetServerSideProps } from 'next'
 import type { Post } from '@prisma/client'
 
 const getPosts = async ({
@@ -79,7 +79,7 @@ const Home = ({
 
 export default Home
 
-export const getServerSideProps: GetStaticProps = async () => {
+export const getServerSideProps: GetServerSideProps = async () => {
   const posts = await prisma.post.findMany({
     take: 4,
     select: { content: true, title: true, imageUrl: true, id: true },
